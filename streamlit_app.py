@@ -16,6 +16,9 @@ def guardar(d):
     with open(DATA_FILE, "w", encoding="utf8") as f:
         json.dump(d, f, indent=4)
 
+def rd(valor):
+    return f"RD${valor:,.2f}"
+
 # ================== SESSION INIT ==================
 if "datos" not in st.session_state:
     st.session_state.datos = cargar()
@@ -66,14 +69,14 @@ if st.session_state.user is None:
                     "historial": []
                 }
                 guardar(st.session_state.datos)
-                st.success(f"Usuario creado con saldo ${rs:.2f}")
+                st.success(f"Usuario creado con saldo {rd(rs)}")
             else:
                 st.error("Datos inválidos o usuario ya existe")
 
     st.stop()
 
 # ================== HEADER ==================
-st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
+st.success(f"👤 {st.session_state.user} | 💰 {rd(st.session_state.saldo)}")
 
 # ================== AUTO REFRESH ==================
 st_autorefresh(interval=1000, limit=None, key="timer_refresh")
@@ -114,11 +117,10 @@ if segundos == 0:
 
     if total > 0:
         st.session_state.saldo += total
-        resultado_texto = "Ganancia"
+        resultado_texto = f"Ganancia {rd(total)}"
     else:
         resultado_texto = "Perdida"
 
-    # ======= HISTORIAL DETALLADO (CORRECCIÓN) =======
     st.session_state.hist.append(
         f"Sorteo: {'-'.join(f'{n:02d}' for n in resultado)}\n"
         f"Tus jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}\n"
@@ -149,7 +151,7 @@ if st.button("🎯 Apostar", key="btn_bet"):
         st.session_state.saldo -= monto
         st.session_state.auto.append((num, monto))
         st.session_state.hist.append(
-            f"🎯 Apostó {num:02d} por ${monto:.2f} ({datetime.now().strftime('%H:%M:%S')})"
+            f"🎯 Apostó {num:02d} por {rd(monto)} ({datetime.now().strftime('%H:%M:%S')})"
         )
 
         st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
