@@ -28,16 +28,12 @@ if "saldo" not in st.session_state:
     st.session_state.saldo = 0.0
 if "hist" not in st.session_state:
     st.session_state.hist = []
-if "hist_dia" not in st.session_state:
-    st.session_state.hist_dia = []
 if "inicio_sorteo" not in st.session_state:
     st.session_state.inicio_sorteo = time.time()
 if "auto" not in st.session_state:
     st.session_state.auto = []
 if "ultimo_resultado" not in st.session_state:
     st.session_state.ultimo_resultado = ["--", "--", "--"]
-if "popup_ganancia" not in st.session_state:
-    st.session_state.popup_ganancia = None
 
 # ================== LOGIN / REGISTRO ==================
 st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
@@ -49,51 +45,81 @@ if st.session_state.user is None:
     with tab1:
         u = st.text_input("Usuario", key="login_user")
         c = st.text_input("Clave", type="password", key="login_pass")
-        if st.button("Entrar"):
+        if st.button("Entrar", key="btn_login"):
             d = st.session_state.datos
             if u in d and d[u]["clave"] == c:
                 st.session_state.user = u
                 st.session_state.saldo = d[u]["saldo"]
+                st.session_state.hist = d[u]["historial"]
                 st.success("Login correcto")
                 st.rerun()
             else:
                 st.error("Usuario o clave incorrectos")
 
     with tab2:
-        ru = st.text_input("Nuevo usuario")
-        rc = st.text_input("Clave", type="password")
-        rs = st.number_input("Saldo inicial", min_value=1.0, step=1.0)
-        if st.button("Crear usuario"):
-            rs *= 1.1
-            st.session_state.datos[ru] = {
-                "clave": rc,
-                "saldo": rs,
-                "historial": []
-            }
-            guardar(st.session_state.datos)
-            st.success(f"Usuario creado con saldo {rd(rs)}")
+        ru = st.text_input("Nuevo usuario", key="reg_user")
+        rc = st.text_input("Clave", type="password", key="reg_pass")
+        rs = st.number_input("Saldo inicial", min_value=1.0, step=1.0, key="reg_saldo")
+        if st.button("Crear usuario", key="btn_reg"):
+            if ru and rc and ru not in st.session_state.datos:
+                rs *= 1.1
+                st.session_state.datos[ru] = {
+                    "clave": rc,
+                    "saldo": rs,
+                    "historial": []
+                }
+                guardar(st.session_state.datos)
+                st.success(f"Usuario creado con saldo {rd(rs)}")
+            else:
+                st.error("Datos inválidos o usuario ya existe")
 
     st.stop()
 
 # ================== HEADER ==================
-st.success(f"👤 {st.session_state.user} | 💰 {rd(st.session_state.saldo)}")
+col1, col2 = st.columns([8, 1])
+with col1:
+    st.success(f"👤 {st.session_state.user} | 💰 {rd(st.session_state.saldo)}")
+with col2:
+    if st.button("➕", key="recargar_btn"):
+        st.session_state.mostrar_recarga = True
+
+# ================== RECARGA SALDO (ÚNICO AGREGADO) ==================
+if st.session_state.get("mostrar_recarga"):
+    with st.expander("💳 Recargar saldo", expanded=True):
+        monto_recarga = st.number_input("Monto a recargar", min_value=1.0, step=1.0)
+        if st.button("Confirmar recarga"):
+            bono = monto_recarga * 0.10
+            total = monto_recarga + bono
+            st.session_state.saldo += total
+
+            st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+            guardar(st.session_state.datos)
+
+            st.success(f"Recargado {rd(monto_recarga)} + bono {rd(bono)}")
+            st.session_state.mostrar_recarga = False
+            st.rerun()
 
 # ================== AUTO REFRESH ==================
-st_autorefresh(interval=1000, limit=None)
+st_autorefresh(interval=1000, limit=None, key="timer_refresh")
 
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
 # ================== RESULTADO ==================
 st.markdown(
-    f"<h1 style='text-align:center'>{' '.join(st.session_state.ultimo_resultado)}</h1>",
+    f"""
+    <div style="
+        text-align:center;
+        font-size:42px;
+        font-weight:bold;
+        margin-top:15px;
+        letter-spacing:12px;
+    ">
+        {" ".join(st.session_state.ultimo_resultado)}
+    </div>
+    """,
     unsafe_allow_html=True
 )
-
-# ================== POPUP GANANCIA ==================
-if st.session_state.popup_ganancia:
-    st.success(st.session_state.popup_ganancia)
-    st.session_state.popup_ganancia = None
 
 # ================== SORTEO ==================
 if segundos == 0:
@@ -102,31 +128,32 @@ if segundos == 0:
     st.session_state.inicio_sorteo = time.time()
 
     total = 0
-    apostado = sum(m for _, m in st.session_state.auto)
-    jugadas = [f"{n:02d}" for n, _ in st.session_state.auto]
+    jugadas = [f"{num:02d}" for num, _ in st.session_state.auto]
 
     for num, monto in st.session_state.auto:
         for pos, res in enumerate(resultado):
             if num == res:
-                total += monto * [60, 8, 4][pos]
+                mult = [60, 8, 4][pos]
+                total += monto * mult
 
     if total > 0:
         st.session_state.saldo += total
-        st.session_state.popup_ganancia = f"🎉 Ganaste {rd(total)} 🎉"
+        st.success(f"🎉 Ganaste {rd(total)} 🎉")
+        resultado_texto = f"Ganancia {rd(total)}"
+    else:
+        resultado_texto = "Perdida"
 
-    registro = (
-        f"Apuesta {len(st.session_state.hist_dia)+1}\n"
-        f"Tus Jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}\n"
-        f"Sorteo: {'-'.join(st.session_state.ultimo_resultado)}\n"
-        f"Resultado: {'Ganada' if total > 0 else 'Perdida'}\n"
-        f"Ganancia: {rd(total)}\n"
-        f"Dinero perdido: {rd(apostado if total == 0 else 0)}\n"
-        "-----------------------------"
+    st.session_state.hist.append(
+        f"Sorteo: {'-'.join(f'{n:02d}' for n in resultado)}\n"
+        f"Tus jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}\n"
+        f"Resultado: {resultado_texto}\n"
+        "------------------------------"
     )
 
-    st.session_state.hist_dia.append(registro)
-    st.session_state.hist.clear()
-    st.session_state.auto.clear()
+    st.session_state.auto = []
+    st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+    st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
+    guardar(st.session_state.datos)
 
     st.rerun()
 
@@ -134,25 +161,36 @@ if segundos == 0:
 st.divider()
 st.subheader("🎯 Apostar")
 
-num = st.number_input("Número (00–99)", min_value=0, max_value=99)
-monto = st.number_input("Monto", min_value=1.0, step=1.0)
+num = st.number_input("Número (00–99)", min_value=0, max_value=99, key="bet_num")
+monto = st.number_input("Monto", min_value=1.0, step=1.0, key="bet_monto")
 
-if st.button("🎯 Apostar"):
-    if monto <= st.session_state.saldo:
+if st.button("🎯 Apostar", key="btn_bet"):
+    if segundos <= 10:
+        st.warning("No se puede apostar con 10 segundos o menos")
+    elif monto > st.session_state.saldo:
+        st.warning("Saldo insuficiente")
+    else:
         st.session_state.saldo -= monto
         st.session_state.auto.append((num, monto))
-        st.session_state.hist.append(f"Apuesta {num:02d} por {rd(monto)}")
+        st.session_state.hist.append(
+            f"🎯 Apostó {num:02d} por {rd(monto)} ({datetime.now().strftime('%H:%M:%S')})"
+        )
+
+        st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+        st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
+        guardar(st.session_state.datos)
+
+        st.success("Apuesta registrada")
         st.rerun()
 
-# ================== HISTORIAL ACTUAL ==================
+# ================== HISTORIAL ==================
 st.divider()
-st.subheader("📜 Apuestas del sorteo actual")
-st.text_area("", "\n".join(st.session_state.hist), height=150)
-
-# ================== HISTORIAL DEL DIA ==================
-st.divider()
-with st.expander("📅 Ver historial del día"):
-    st.text_area("", "\n".join(st.session_state.hist_dia), height=300)
+st.subheader("📜 Historial")
+st.text_area(
+    "Historial",
+    "\n".join(st.session_state.hist),
+    height=260
+)
 
 # ================== LOGOUT ==================
 st.divider()
