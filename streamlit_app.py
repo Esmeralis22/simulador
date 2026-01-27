@@ -52,31 +52,24 @@ ADMIN_USER = "admin"
 ADMIN_PASS = "admin123"
 
 # ================== LOGIN ==================
-st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
-st.title("🎰 Lotería Dominicana – Simulador")
-
-if st.session_state.user is None:
-    tab1, tab2 = st.tabs(["🔐 Login", "🆕 Registro"])
-
-    with tab1:
-        u = st.text_input("Usuario", key="login_user")
-        c = st.text_input("Clave", type="password", key="login_pass")
-        if st.button("Entrar"):
-            d = st.session_state.datos
-            if u == ADMIN_USER and c == ADMIN_PASS:
-                st.session_state.user = ADMIN_USER
-                st.success("Login como administrador")
-                st.rerun()
-            elif u in d and d[u]["clave"] == c:
-                st.session_state.user = u
-                st.session_state.saldo = d[u].get("saldo", 0.0)
-                st.session_state.hist_dia = d[u].get("hist_dia", [])
-                st.session_state.resultados_dia = d[u].get("resultados_dia", [])
-                st.session_state.recargas_pendientes = d[u].get("recargas_pendientes", {})
-                st.success("Login correcto")
-                st.rerun()
-            else:
-                st.error("Usuario o clave incorrectos")
+u = st.text_input("Usuario", key="login_user")
+c = st.text_input("Clave", type="password", key="login_pass")
+if st.button("Entrar"):
+    if u == "admin" and c == "admin123":
+        st.session_state.user = "admin"
+        st.success("Bienvenido Admin")
+        st.rerun()
+    else:
+        d = st.session_state.datos
+        if u in d and d[u]["clave"] == c:
+            st.session_state.user = u
+            st.session_state.saldo = d[u]["saldo"]
+            st.session_state.hist_dia = d[u].get("hist_dia", [])
+            st.session_state.resultados_dia = d[u].get("resultados_dia", [])
+            st.success("Login correcto")
+            st.rerun()
+        else:
+            st.error("Usuario o clave incorrectos")
 
     with tab2:
         ru = st.text_input("Nuevo usuario")
@@ -296,4 +289,5 @@ st.divider()
 if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
+
 
