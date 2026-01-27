@@ -83,18 +83,29 @@ st.subheader(f"⏳ Sorteo en {segundos}s")
 
 # ================== RESULTADO ==================
 st.markdown(
-    f"## 🎲 Resultado actual: **{' '.join(st.session_state.ultimo_resultado)}**"
+    f"""
+    <div style="
+        text-align:center;
+        font-size:42px;
+        font-weight:bold;
+        margin-top:15px;
+        letter-spacing:12px;
+    ">
+        {" ".join(st.session_state.ultimo_resultado)}
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
-# ================== SORTEO (ÚNICA PARTE MODIFICADA) ==================
+# ================== SORTEO ==================
 if segundos == 0:
     resultado = [random.randint(0, 99) for _ in range(3)]
     st.session_state.ultimo_resultado = [f"{n:02d}" for n in resultado]
     st.session_state.inicio_sorteo = time.time()
 
-    jugadas = [f"{n:02d}" for n, _ in st.session_state.auto]
-
     total = 0
+    jugadas = [f"{num:02d}" for num, _ in st.session_state.auto]
+
     for num, monto in st.session_state.auto:
         for pos, res in enumerate(resultado):
             if num == res:
@@ -104,21 +115,16 @@ if segundos == 0:
     if total > 0:
         st.session_state.saldo += total
         resultado_texto = "Ganancia"
-        st.success(f"🎉 Ganaste ${total:.2f}")
     else:
         resultado_texto = "Perdida"
 
-    # ===== HISTORIAL FORMATEADO =====
+    # ======= HISTORIAL DETALLADO (CORRECCIÓN) =======
     st.session_state.hist.append(
-        f"Sorteo: {'-'.join(f'{n:02d}' for n in resultado)}"
+        f"Sorteo: {'-'.join(f'{n:02d}' for n in resultado)}\n"
+        f"Tus jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}\n"
+        f"Resultado: {resultado_texto}\n"
+        "------------------------------"
     )
-    st.session_state.hist.append(
-        f"Tus jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}"
-    )
-    st.session_state.hist.append(
-        f"Resultado: {resultado_texto}"
-    )
-    st.session_state.hist.append("-" * 30)
 
     st.session_state.auto = []
     st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
@@ -142,8 +148,9 @@ if st.button("🎯 Apostar", key="btn_bet"):
     else:
         st.session_state.saldo -= monto
         st.session_state.auto.append((num, monto))
-        registro = f"🎯 Apostó {num:02d} por ${monto:.2f} ({datetime.now().strftime('%H:%M:%S')})"
-        st.session_state.hist.append(registro)
+        st.session_state.hist.append(
+            f"🎯 Apostó {num:02d} por ${monto:.2f} ({datetime.now().strftime('%H:%M:%S')})"
+        )
 
         st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
         st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
