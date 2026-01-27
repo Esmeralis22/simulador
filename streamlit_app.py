@@ -46,7 +46,7 @@ if "ver_resultados" not in st.session_state:
     st.session_state.ver_resultados = False
 
 # ================== LOGIN / REGISTRO ==================
-st.set_page_config(page_title="🎰 Esteban Loteria", layout="centered")
+st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
 st.title("🎰 Lotería Dominicana – Simulador")
 
 if st.session_state.user is None:
@@ -60,6 +60,8 @@ if st.session_state.user is None:
             if u in d and d[u]["clave"] == c:
                 st.session_state.user = u
                 st.session_state.saldo = d[u]["saldo"]
+                st.session_state.hist_dia = d[u].get("hist_dia", [])
+                st.session_state.resultados_dia = d[u].get("resultados_dia", [])
                 st.success("Login correcto")
                 st.rerun()
             else:
@@ -74,7 +76,8 @@ if st.session_state.user is None:
             st.session_state.datos[ru] = {
                 "clave": rc,
                 "saldo": rs,
-                "historial": []
+                "hist_dia": [],
+                "resultados_dia": []
             }
             guardar(st.session_state.datos)
             st.success(f"Usuario creado con saldo {rd(rs)}")
@@ -115,11 +118,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ================== POPUP GANANCIA ==================
-if st.session_state.popup_ganancia:
-    st.success(st.session_state.popup_ganancia)
-    st.session_state.popup_ganancia = None
-
 # ================== SORTEO ==================
 if segundos == 0:
     resultado = [random.randint(0, 99) for _ in range(3)]
@@ -156,6 +154,11 @@ if segundos == 0:
 
         st.session_state.hist_dia.append(registro)
 
+    st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+    st.session_state.datos[st.session_state.user]["hist_dia"] = st.session_state.hist_dia
+    st.session_state.datos[st.session_state.user]["resultados_dia"] = st.session_state.resultados_dia
+    guardar(st.session_state.datos)
+
     st.session_state.hist.clear()
     st.session_state.auto.clear()
     st.rerun()
@@ -165,36 +168,35 @@ st.divider()
 st.subheader("🎯 Apostar")
 
 num = st.number_input("Número (00–99)", min_value=0, max_value=99)
-monto = st.number_input("Monto", min_value=1.0, step=1.0)
+monto = st.number_input("Monto", min_value=1.0, max_value=1000.0, step=1.0)
 
 if st.button("🎯 Apostar"):
-    if monto > st.session_state.saldo:
+    if monto < 1 or monto > 1000:
+        st.error("❌ El monto debe estar entre RD$1.00 y RD$1,000.00")
+    elif monto > st.session_state.saldo:
         st.error("❌ Saldo insuficiente para realizar la apuesta")
     else:
         st.session_state.saldo -= monto
         st.session_state.auto.append((num, monto))
         st.session_state.hist.append(f"Apuesta {num:02d} por {rd(monto)}")
+        st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+        guardar(st.session_state.datos)
         st.rerun()
 
-# ================== HISTORIAL ACTUAL ==================
+# ================== HISTORIALES ==================
 st.divider()
 st.subheader("📜 Apuestas del sorteo actual")
 st.text_area("", "\n".join(st.session_state.hist), height=150)
 
-# ================== HISTORIAL DEL DIA ==================
-st.divider()
 with st.expander("📅 Ver historial del día"):
     st.text_area("", "\n".join(st.session_state.hist_dia), height=300)
 
-# ================== RESULTADOS DEL DIA ==================
 if st.button("📊 Resultados del día"):
-    st.session_state.ver_resultados = not st.session_state.ver_resultados
-
-if st.session_state.ver_resultados:
-    st.text_area("Todos los sorteos del día", "\n".join(st.session_state.resultados_dia), height=300)
+    st.text_area("Resultados", "\n".join(st.session_state.resultados_dia), height=300)
 
 # ================== LOGOUT ==================
 st.divider()
 if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
+
