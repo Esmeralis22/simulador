@@ -72,38 +72,8 @@ if st.session_state.user is None:
 
     st.stop()
 
-# ================== HEADER (ÚNICA PARTE MODIFICADA) ==================
-col_user, col_saldo, col_plus = st.columns([4, 2, 1])
-
-with col_user:
-    st.success(f"👤 {st.session_state.user}")
-
-with col_saldo:
-    st.success(f"💰 ${st.session_state.saldo:.2f}")
-
-with col_plus:
-    if st.button("➕", key="btn_recargar"):
-        st.session_state.mostrar_recarga = True
-
-if st.session_state.get("mostrar_recarga", False):
-    monto_recarga = st.number_input(
-        "Monto a recargar",
-        min_value=1.0,
-        step=1.0,
-        key="monto_recarga"
-    )
-
-    if st.button("💳 Confirmar recarga"):
-        bono = monto_recarga * 0.10
-        total = monto_recarga + bono
-
-        st.session_state.saldo += total
-        st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
-        guardar(st.session_state.datos)
-
-        st.success(f"Recarga exitosa 💰 ${monto_recarga:.2f} + bono ${bono:.2f}")
-        st.session_state.mostrar_recarga = False
-        st.rerun()
+# ================== HEADER ==================
+st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
 
 # ================== AUTO REFRESH ==================
 st_autorefresh(interval=1000, limit=None, key="timer_refresh")
@@ -111,16 +81,18 @@ st_autorefresh(interval=1000, limit=None, key="timer_refresh")
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== RESULTADO EN TIEMPO REAL ==================
+# ================== RESULTADO ==================
 st.markdown(
     f"## 🎲 Resultado actual: **{' '.join(st.session_state.ultimo_resultado)}**"
 )
 
-# ================== SORTEO ==================
+# ================== SORTEO (ÚNICA PARTE MODIFICADA) ==================
 if segundos == 0:
     resultado = [random.randint(0, 99) for _ in range(3)]
     st.session_state.ultimo_resultado = [f"{n:02d}" for n in resultado]
     st.session_state.inicio_sorteo = time.time()
+
+    jugadas = [f"{n:02d}" for n, _ in st.session_state.auto]
 
     total = 0
     for num, monto in st.session_state.auto:
@@ -131,10 +103,22 @@ if segundos == 0:
 
     if total > 0:
         st.session_state.saldo += total
+        resultado_texto = "Ganancia"
         st.success(f"🎉 Ganaste ${total:.2f}")
+    else:
+        resultado_texto = "Perdida"
 
-    registro = f"🎲 Sorteo {', '.join(f'{n:02d}' for n in resultado)} → ${total:.2f}"
-    st.session_state.hist.append(registro)
+    # ===== HISTORIAL FORMATEADO =====
+    st.session_state.hist.append(
+        f"Sorteo: {'-'.join(f'{n:02d}' for n in resultado)}"
+    )
+    st.session_state.hist.append(
+        f"Tus jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}"
+    )
+    st.session_state.hist.append(
+        f"Resultado: {resultado_texto}"
+    )
+    st.session_state.hist.append("-" * 30)
 
     st.session_state.auto = []
     st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
@@ -183,5 +167,3 @@ st.divider()
 if st.button("🚪 Cerrar sesión", key="logout"):
     st.session_state.clear()
     st.rerun()
-
-
