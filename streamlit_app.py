@@ -194,13 +194,18 @@ with st.expander("📅 Ver historial del día"):
 if st.button("📊 Resultados del día"):
     st.text_area("Resultados", "\n".join(st.session_state.resultados_dia), height=300)
 
-# ================== LOGOUT ==================
+# ================== LOGOUT / ELIMINAR CUENTA ==================
 st.divider()
-if st.button("🚪 Cerrar sesión"):
-    st.session_state.clear()
-    st.rerun()
-
-
-
-
-
+col_logout, col_delete = st.columns(2)
+with col_logout:
+    if st.button("🚪 Cerrar sesión"):
+        st.session_state.clear()
+        st.rerun()
+with col_delete:
+    if st.button("🗑️ Eliminar cuenta"):
+        if st.session_state.user in st.session_state.datos:
+            del st.session_state.datos[st.session_state.user]
+            guardar(st.session_state.datos)
+        st.session_state.clear()
+        st.success("Cuenta eliminada correctamente")
+        st.rerun()
