@@ -44,6 +44,8 @@ if "mostrar_recarga" not in st.session_state:
     st.session_state.mostrar_recarga = False
 if "ver_resultados" not in st.session_state:
     st.session_state.ver_resultados = False
+if "confirm_delete" not in st.session_state:
+    st.session_state.confirm_delete = False
 
 # ================== LOGIN / REGISTRO ==================
 st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
@@ -202,10 +204,21 @@ with col_logout:
         st.session_state.clear()
         st.rerun()
 with col_delete:
-    if st.button("🗑️ Eliminar cuenta"):
-        if st.session_state.user in st.session_state.datos:
-            del st.session_state.datos[st.session_state.user]
-            guardar(st.session_state.datos)
-        st.session_state.clear()
-        st.success("Cuenta eliminada correctamente")
-        st.rerun()
+    if not st.session_state.confirm_delete:
+        if st.button("🗑️ Eliminar cuenta"):
+            st.session_state.confirm_delete = True
+    else:
+        st.warning("⚠️ ¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.")
+        confirm, cancel = st.columns(2)
+        with confirm:
+            if st.button("Sí, eliminar"):
+                if st.session_state.user in st.session_state.datos:
+                    del st.session_state.datos[st.session_state.user]
+                    guardar(st.session_state.datos)
+                st.session_state.clear()
+                st.success("Cuenta eliminada correctamente")
+                st.rerun()
+        with cancel:
+            if st.button("Cancelar"):
+                st.session_state.confirm_delete = False
+                st.rerun()
