@@ -34,6 +34,8 @@ if "auto" not in st.session_state:
     st.session_state.auto = []
 if "ultimo_resultado" not in st.session_state:
     st.session_state.ultimo_resultado = ["--", "--", "--"]
+if "jugadas_actuales" not in st.session_state:
+    st.session_state.jugadas_actuales = []
 
 # ================== LOGIN / REGISTRO ==================
 st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
@@ -87,13 +89,7 @@ st.subheader(f"⏳ Sorteo en {segundos}s")
 # ================== RESULTADO ==================
 st.markdown(
     f"""
-    <div style="
-        text-align:center;
-        font-size:42px;
-        font-weight:bold;
-        margin-top:15px;
-        letter-spacing:12px;
-    ">
+    <div style="text-align:center;font-size:42px;font-weight:bold;letter-spacing:12px;">
         {" ".join(st.session_state.ultimo_resultado)}
     </div>
     """,
@@ -107,8 +103,6 @@ if segundos == 0:
     st.session_state.inicio_sorteo = time.time()
 
     total = 0
-    jugadas = [f"{num:02d}" for num, _ in st.session_state.auto]
-
     for num, monto in st.session_state.auto:
         for pos, res in enumerate(resultado):
             if num == res:
@@ -123,12 +117,14 @@ if segundos == 0:
 
     st.session_state.hist.append(
         f"Sorteo: {'-'.join(f'{n:02d}' for n in resultado)}\n"
-        f"Tus jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}\n"
+        f"Tus jugadas: {', '.join(st.session_state.jugadas_actuales) if st.session_state.jugadas_actuales else 'Ninguna'}\n"
         f"Resultado: {resultado_texto}\n"
         "------------------------------"
     )
 
     st.session_state.auto = []
+    st.session_state.jugadas_actuales = []
+
     st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
     st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
     guardar(st.session_state.datos)
@@ -150,29 +146,26 @@ if st.button("🎯 Apostar", key="btn_bet"):
     else:
         st.session_state.saldo -= monto
         st.session_state.auto.append((num, monto))
-        st.session_state.hist.append(
-            f"🎯 Apostó {num:02d} por {rd(monto)} ({datetime.now().strftime('%H:%M:%S')})"
-        )
+
+        jugada_txt = f"{num:02d} ({rd(monto)})"
+        st.session_state.jugadas_actuales.append(jugada_txt)
+
+        st.session_state.hist.append(f"Tus jugadas: {jugada_txt}")
 
         st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
         st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
         guardar(st.session_state.datos)
 
-        st.success("Apuesta registrada")
         st.rerun()
 
 # ================== HISTORIAL ==================
 st.divider()
 st.subheader("📜 Historial")
-st.text_area(
-    "Historial de apuestas",
-    "\n".join(st.session_state.hist),
-    height=260,
-    key="hist_area"
-)
+st.text_area("Historial", "\n".join(st.session_state.hist), height=260)
 
 # ================== LOGOUT ==================
 st.divider()
-if st.button("🚪 Cerrar sesión", key="logout"):
+if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
+
