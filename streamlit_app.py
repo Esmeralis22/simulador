@@ -124,9 +124,10 @@ if st.session_state.user == ADMIN_USER:
     st.divider()
 
     # 4️⃣ Aprobar recargas y editar saldo
-    st.write("**4️⃣ Recargas pendientes y edición de saldo:**")
-    for usr, info in st.session_state.datos.items():
-        recs = info.get("recargas_pendientes", {})
+st.write("**4️⃣ Recargas pendientes y edición de saldo:**")
+for usr, info in st.session_state.datos.items():
+    recs = info.get("recargas_pendientes", {})
+    if recs:  # <-- solo si hay recargas pendientes
         for key, monto in recs.items():
             col1, col2 = st.columns([3,1])
             with col1:
@@ -139,6 +140,7 @@ if st.session_state.user == ADMIN_USER:
                     del st.session_state.datos[usr]["recargas_pendientes"][key]
                     guardar(st.session_state.datos)
                     st.success(f"Aprobado {rd(monto)} + bono {rd(bono)} a {usr}")
+
 
     st.divider()
 
@@ -294,3 +296,4 @@ st.divider()
 if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
+
