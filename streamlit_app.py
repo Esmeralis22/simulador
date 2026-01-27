@@ -48,7 +48,7 @@ if "confirm_delete" not in st.session_state:
     st.session_state.confirm_delete = False
 
 # ================== LOGIN / REGISTRO ==================
-st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
+st.set_page_config(page_title="🎰 Esteban Loteria", layout="centered")
 st.title("🎰 Lotería Dominicana – Simulador")
 
 if st.session_state.user is None:
@@ -222,3 +222,4 @@ with col_delete:
             if st.button("Cancelar"):
                 st.session_state.confirm_delete = False
                 st.rerun()
+
