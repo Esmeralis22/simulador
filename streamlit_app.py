@@ -140,6 +140,7 @@ for usr, info in st.session_state.datos.items():
                 guardar(st.session_state.datos)
                 st.success(f"Aprobado {rd(monto)} + bono {rd(bono)} a {usr}")
                 st.experimental_rerun()  # recarga la página para que desaparezca de la lista
+st.divider()
 
 
     # 5️⃣ Bloquear / desbloquear usuarios
@@ -294,4 +295,5 @@ st.divider()
 if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
+
 
