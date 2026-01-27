@@ -29,6 +29,10 @@ if "inicio_sorteo" not in st.session_state:
     st.session_state.inicio_sorteo = time.time()
 if "auto" not in st.session_state:
     st.session_state.auto = []
+if "ultimo_resultado" not in st.session_state:
+    st.session_state.ultimo_resultado = None
+if "mostrar_recarga" not in st.session_state:
+    st.session_state.mostrar_recarga = False
 
 # ================== LOGIN / REGISTRO ==================
 st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
@@ -70,19 +74,70 @@ if st.session_state.user is None:
 
     st.stop()
 
-# ================== AUTO REFRESH (🔥 CLAVE DEL SORTEO EN VIVO)
+# ================== AUTO REFRESH
 # ==================
 st_autorefresh(interval=1000, key="sorteo_live")
 
-# ================== HEADER ==================
-st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
+# ================== HEADER + SALDO
+# ==================
+c1, c2 = st.columns([4, 1])
+with c1:
+    st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
+with c2:
+    if st.button("➕", help="Recargar saldo"):
+        st.session_state.mostrar_recarga = not st.session_state.mostrar_recarga
 
+if st.session_state.mostrar_recarga:
+    rec = st.number_input("Monto a recargar", min_value=1.0, step=1.0)
+    if st.button("Confirmar recarga"):
+        bono = rec * 0.10
+        st.session_state.saldo += rec + bono
+        st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+        guardar(st.session_state.datos)
+        st.success(f"Recargado ${rec:.2f} + bono ${bono:.2f}")
+        st.session_state.mostrar_recarga = False
+        st.rerun()
+
+# ================== COUNTDOWN
+# ==================
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== SORTEO ==================
+# ================== BOLOS DEL SORTEO
+# ==================
+def bolo(n):
+    return f"""
+    <div style="
+        width:70px;
+        height:70px;
+        border-radius:50%;
+        background:linear-gradient(135deg,#ff9800,#ff5722);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:white;
+        font-size:28px;
+        font-weight:bold;
+        box-shadow:0 4px 10px rgba(0,0,0,0.3);
+    ">{n}</div>
+    """
+
+st.markdown(
+    "<div style='display:flex;justify-content:center;gap:20px;margin:20px 0;'>"
+    + (
+        "".join(bolo(f"{n:02d}") for n in st.session_state.ultimo_resultado)
+        if st.session_state.ultimo_resultado
+        else bolo("--") * 3
+    )
+    + "</div>",
+    unsafe_allow_html=True
+)
+
+# ================== SORTEO
+# ==================
 if segundos == 0:
     resultado = [random.randint(0, 99) for _ in range(3)]
+    st.session_state.ultimo_resultado = resultado
     st.session_state.inicio_sorteo = time.time()
 
     total = 0
@@ -104,7 +159,8 @@ if segundos == 0:
     st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
     guardar(st.session_state.datos)
 
-# ================== APUESTAS ==================
+# ================== APUESTAS
+# ==================
 st.divider()
 st.subheader("🎯 Apostar")
 
@@ -129,7 +185,8 @@ if st.button("🎯 Apostar", key="btn_bet"):
         st.success("Apuesta registrada")
         st.rerun()
 
-# ================== HISTORIAL ==================
+# ================== HISTORIAL
+# ==================
 st.divider()
 st.subheader("📜 Historial")
 st.text_area(
@@ -139,7 +196,8 @@ st.text_area(
     key="hist_area"
 )
 
-# ================== LOGOUT ==================
+# ================== LOGOUT
+# ==================
 st.divider()
 if st.button("🚪 Cerrar sesión", key="logout"):
     st.session_state.clear()
