@@ -30,6 +30,8 @@ if "hist" not in st.session_state:
     st.session_state.hist = []
 if "hist_dia" not in st.session_state:
     st.session_state.hist_dia = []
+if "resultados_dia" not in st.session_state:
+    st.session_state.resultados_dia = []
 if "inicio_sorteo" not in st.session_state:
     st.session_state.inicio_sorteo = time.time()
 if "auto" not in st.session_state:
@@ -40,9 +42,11 @@ if "popup_ganancia" not in st.session_state:
     st.session_state.popup_ganancia = None
 if "mostrar_recarga" not in st.session_state:
     st.session_state.mostrar_recarga = False
+if "ver_resultados" not in st.session_state:
+    st.session_state.ver_resultados = False
 
 # ================== LOGIN / REGISTRO ==================
-st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
+st.set_page_config(page_title="🎰 Esteban Loteria", layout="centered")
 st.title("🎰 Lotería Dominicana – Simulador")
 
 if st.session_state.user is None:
@@ -77,7 +81,7 @@ if st.session_state.user is None:
 
     st.stop()
 
-# ================== HEADER (MODIFICADO SOLO AQUÍ) ==================
+# ================== HEADER ==================
 col1, col2 = st.columns([9, 1])
 with col1:
     st.success(f"👤 {st.session_state.user} | 💰 {rd(st.session_state.saldo)}")
@@ -85,7 +89,7 @@ with col2:
     if st.button("➕"):
         st.session_state.mostrar_recarga = True
 
-# ================== RECARGA SALDO (AGREGADO) ==================
+# ================== RECARGA ==================
 if st.session_state.mostrar_recarga:
     with st.expander("💳 Recargar saldo", expanded=True):
         monto = st.number_input("Monto a recargar", min_value=1.0, step=1.0)
@@ -122,6 +126,10 @@ if segundos == 0:
     st.session_state.ultimo_resultado = [f"{n:02d}" for n in resultado]
     st.session_state.inicio_sorteo = time.time()
 
+    st.session_state.resultados_dia.append(
+        f"Sorteo: {'-'.join(st.session_state.ultimo_resultado)}"
+    )
+
     total = 0
     apostado = sum(m for _, m in st.session_state.auto)
     jugadas = [f"{n:02d}" for n, _ in st.session_state.auto]
@@ -131,24 +139,25 @@ if segundos == 0:
             if num == res:
                 total += monto * [60, 8, 4][pos]
 
-    if total > 0:
-        st.session_state.saldo += total
-        st.session_state.popup_ganancia = f"🎉 Ganaste {rd(total)} 🎉"
+    if st.session_state.auto:
+        if total > 0:
+            st.session_state.saldo += total
+            st.session_state.popup_ganancia = f"🎉 Ganaste {rd(total)} 🎉"
 
-    registro = (
-        f"Apuesta {len(st.session_state.hist_dia)+1}\n"
-        f"Tus Jugadas: {', '.join(jugadas) if jugadas else 'Ninguna'}\n"
-        f"Sorteo: {'-'.join(st.session_state.ultimo_resultado)}\n"
-        f"Resultado: {'Ganada' if total > 0 else 'Perdida'}\n"
-        f"Ganancia: {rd(total)}\n"
-        f"Dinero perdido: {rd(apostado if total == 0 else 0)}\n"
-        "-----------------------------"
-    )
+        registro = (
+            f"Apuesta {len(st.session_state.hist_dia)+1}\n"
+            f"Tus Jugadas: {', '.join(jugadas)}\n"
+            f"Sorteo: {'-'.join(st.session_state.ultimo_resultado)}\n"
+            f"Resultado: {'Ganada' if total > 0 else 'Perdida'}\n"
+            f"Ganancia: {rd(total)}\n"
+            f"Dinero perdido: {rd(apostado if total == 0 else 0)}\n"
+            "-----------------------------"
+        )
 
-    st.session_state.hist_dia.append(registro)
+        st.session_state.hist_dia.append(registro)
+
     st.session_state.hist.clear()
     st.session_state.auto.clear()
-
     st.rerun()
 
 # ================== APUESTAS ==================
@@ -159,7 +168,9 @@ num = st.number_input("Número (00–99)", min_value=0, max_value=99)
 monto = st.number_input("Monto", min_value=1.0, step=1.0)
 
 if st.button("🎯 Apostar"):
-    if monto <= st.session_state.saldo:
+    if monto > st.session_state.saldo:
+        st.error("❌ Saldo insuficiente para realizar la apuesta")
+    else:
         st.session_state.saldo -= monto
         st.session_state.auto.append((num, monto))
         st.session_state.hist.append(f"Apuesta {num:02d} por {rd(monto)}")
@@ -174,6 +185,13 @@ st.text_area("", "\n".join(st.session_state.hist), height=150)
 st.divider()
 with st.expander("📅 Ver historial del día"):
     st.text_area("", "\n".join(st.session_state.hist_dia), height=300)
+
+# ================== RESULTADOS DEL DIA ==================
+if st.button("📊 Resultados del día"):
+    st.session_state.ver_resultados = not st.session_state.ver_resultados
+
+if st.session_state.ver_resultados:
+    st.text_area("Todos los sorteos del día", "\n".join(st.session_state.resultados_dia), height=300)
 
 # ================== LOGOUT ==================
 st.divider()
