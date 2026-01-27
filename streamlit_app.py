@@ -1,6 +1,7 @@
 import streamlit as st
 import random, json, os, time
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
 DATA_FILE = "usuarios_loteria.json"
 
@@ -14,6 +15,9 @@ def cargar():
 def guardar(d):
     with open(DATA_FILE, "w", encoding="utf8") as f:
         json.dump(d, f, indent=4)
+
+# ================== AUTO REFRESH REAL ==================
+st_autorefresh(interval=1000, key="timer")
 
 # ================== SESSION INIT ==================
 if "datos" not in st.session_state:
@@ -31,71 +35,31 @@ if "auto" not in st.session_state:
 if "resultado" not in st.session_state:
     st.session_state.resultado = ["--", "--", "--"]
 
-# ================== AUTO REFRESH ==================
-st.markdown("""
-<script>
-setTimeout(() => {
-    window.location.reload();
-}, 1000);
-</script>
-""", unsafe_allow_html=True)
-
-# ================== LOGIN / REGISTRO ==================
+# ================== UI ==================
 st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
 st.title("🎰 Lotería Dominicana – Simulador")
 
+# ================== LOGIN ==================
 if st.session_state.user is None:
-    tab1, tab2 = st.tabs(["🔐 Login", "🆕 Registro"])
-
-    with tab1:
-        u = st.text_input("Usuario", key="login_user")
-        c = st.text_input("Clave", type="password", key="login_pass")
-        if st.button("Entrar", key="btn_login"):
-            d = st.session_state.datos
-            if u in d and d[u]["clave"] == c:
-                st.session_state.user = u
-                st.session_state.saldo = d[u]["saldo"]
-                st.session_state.hist = d[u]["historial"]
-                st.rerun()
-            else:
-                st.error("Usuario o clave incorrectos")
-
-    with tab2:
-        ru = st.text_input("Nuevo usuario", key="reg_user")
-        rc = st.text_input("Clave", type="password", key="reg_pass")
-        rs = st.number_input("Saldo inicial", min_value=1.0, step=1.0, key="reg_saldo")
-        if st.button("Crear usuario", key="btn_reg"):
-            if ru and rc and ru not in st.session_state.datos:
-                rs *= 1.1
-                st.session_state.datos[ru] = {
-                    "clave": rc,
-                    "saldo": rs,
-                    "historial": []
-                }
-                guardar(st.session_state.datos)
-                st.success("Usuario creado")
-            else:
-                st.error("Error en registro")
+    u = st.text_input("Usuario")
+    c = st.text_input("Clave", type="password")
+    if st.button("Entrar"):
+        if u in st.session_state.datos and st.session_state.datos[u]["clave"] == c:
+            st.session_state.user = u
+            st.session_state.saldo = st.session_state.datos[u]["saldo"]
+            st.session_state.hist = st.session_state.datos[u]["historial"]
+            st.rerun()
+        else:
+            st.error("Credenciales incorrectas")
     st.stop()
 
 # ================== HEADER ==================
-col1, col2 = st.columns([4,1])
-with col1:
-    st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
-with col2:
-    if st.button("➕"):
-        rec = st.number_input("Recargar", min_value=1.0, step=1.0)
-        if st.button("Confirmar recarga"):
-            rec *= 1.1
-            st.session_state.saldo += rec
-            st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
-            guardar(st.session_state.datos)
-            st.rerun()
+st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
 
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== BOLOS (CORREGIDO) ==================
+# ================== BOLOS (HORIZONTALES) ==================
 st.markdown(f"""
 <div style="display:flex;justify-content:center;gap:20px;margin-top:15px;">
     <div style="width:80px;height:80px;border-radius:50%;background:#ff5722;color:white;
@@ -123,7 +87,7 @@ if segundos == 0:
     for num, monto in st.session_state.auto:
         for pos, res in enumerate(resultado):
             if int(res) == num:
-                total += monto * [60,8,4][pos]
+                total += monto * [60, 8, 4][pos]
 
     if total > 0:
         st.session_state.saldo += total
@@ -136,7 +100,6 @@ if segundos == 0:
     st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
     st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
     guardar(st.session_state.datos)
-    st.rerun()
 
 # ================== APUESTAS ==================
 st.divider()
@@ -144,7 +107,7 @@ num = st.number_input("Número", min_value=0, max_value=99)
 monto = st.number_input("Monto", min_value=1.0)
 if st.button("🎯 Apostar"):
     if segundos <= 10:
-        st.warning("Cerrado")
+        st.warning("No se puede apostar")
     elif monto > st.session_state.saldo:
         st.warning("Saldo insuficiente")
     else:
@@ -156,14 +119,7 @@ if st.button("🎯 Apostar"):
         st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
         st.session_state.datos[st.session_state.user]["historial"] = st.session_state.hist
         guardar(st.session_state.datos)
-        st.rerun()
 
 # ================== HISTORIAL ==================
 st.divider()
 st.text_area("Historial", "\n".join(st.session_state.hist), height=260)
-
-# ================== LOGOUT ==================
-st.divider()
-if st.button("🚪 Cerrar sesión"):
-    st.session_state.clear()
-    st.rerun()
