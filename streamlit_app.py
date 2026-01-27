@@ -81,9 +81,14 @@ st_autorefresh(interval=1000, limit=None, key="timer_refresh")
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== BOLOS (CORREGIDO) ==================
+# ================== BOLOS (CORRECCIÓN ÚNICA) ==================
 bolos_html = """
-<div style="display:flex;justify-content:center;gap:20px;margin-top:15px;">
+<div style="
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    margin-top:15px;
+">
 """
 
 for n in st.session_state.ultimo_resultado:
