@@ -1,6 +1,7 @@
 import streamlit as st
 import random, json, os, time
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
 DATA_FILE = "usuarios_loteria.json"
 
@@ -28,9 +29,8 @@ if "inicio_sorteo" not in st.session_state:
     st.session_state.inicio_sorteo = time.time()
 if "auto" not in st.session_state:
     st.session_state.auto = []
-# 👉 AÑADIDO (resultado visible)
-if "resultado" not in st.session_state:
-    st.session_state.resultado = ["--", "--", "--"]
+if "ultimo_resultado" not in st.session_state:
+    st.session_state.ultimo_resultado = ["--", "--", "--"]
 
 # ================== LOGIN / REGISTRO ==================
 st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
@@ -75,34 +75,40 @@ if st.session_state.user is None:
 # ================== HEADER ==================
 st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
 
+# ================== AUTO REFRESH ==================
+st_autorefresh(interval=1000, limit=None, key="timer_refresh")
+
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== SORTEO VISIBLE (AÑADIDO) ==================
-st.markdown(f"""
-<div style="display:flex; justify-content:center; gap:20px; margin:20px 0;">
-  <div style="width:80px;height:80px;border-radius:50%;background:#ff5722;
-    color:white;display:flex;align-items:center;justify-content:center;
-    font-size:32px;font-weight:bold;">
-    {st.session_state.resultado[0]}
-  </div>
-  <div style="width:80px;height:80px;border-radius:50%;background:#ff5722;
-    color:white;display:flex;align-items:center;justify-content:center;
-    font-size:32px;font-weight:bold;">
-    {st.session_state.resultado[1]}
-  </div>
-  <div style="width:80px;height:80px;border-radius:50%;background:#ff5722;
-    color:white;display:flex;align-items:center;justify-content:center;
-    font-size:32px;font-weight:bold;">
-    {st.session_state.resultado[2]}
-  </div>
-</div>
+# ================== BOLOS SORTEO ==================
+st.markdown("""
+<div style="display:flex;gap:20px;justify-content:center;margin-top:10px;">
 """, unsafe_allow_html=True)
+
+for n in st.session_state.ultimo_resultado:
+    st.markdown(f"""
+    <div style="
+    width:80px;height:80px;
+    border-radius:50%;
+    background:#ff5722;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:32px;
+    font-weight:bold;
+    ">
+    {n}
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("</div>", unsafe_allow_html=True)
 
 # ================== SORTEO ==================
 if segundos == 0:
     resultado = [random.randint(0, 99) for _ in range(3)]
-    st.session_state.resultado = [f"{n:02d}" for n in resultado]
+    st.session_state.ultimo_resultado = [f"{n:02d}" for n in resultado]
     st.session_state.inicio_sorteo = time.time()
 
     total = 0
