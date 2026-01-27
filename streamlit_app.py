@@ -81,29 +81,31 @@ st_autorefresh(interval=1000, limit=None, key="timer_refresh")
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== BOLOS SORTEO ==================
-st.markdown("""
-<div style="display:flex;gap:20px;justify-content:center;margin-top:10px;">
-""", unsafe_allow_html=True)
+# ================== BOLOS (CORREGIDO) ==================
+bolos_html = """
+<div style="display:flex;justify-content:center;gap:20px;margin-top:15px;">
+"""
 
 for n in st.session_state.ultimo_resultado:
-    st.markdown(f"""
+    bolos_html += f"""
     <div style="
-    width:80px;height:80px;
-    border-radius:50%;
-    background:#ff5722;
-    color:white;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:32px;
-    font-weight:bold;
+        width:80px;height:80px;
+        border-radius:50%;
+        background:#ff5722;
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:32px;
+        font-weight:bold;
     ">
-    {n}
+        {n}
     </div>
-    """, unsafe_allow_html=True)
+    """
 
-st.markdown("</div>", unsafe_allow_html=True)
+bolos_html += "</div>"
+
+st.markdown(bolos_html, unsafe_allow_html=True)
 
 # ================== SORTEO ==================
 if segundos == 0:
