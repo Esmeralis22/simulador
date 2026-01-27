@@ -81,38 +81,21 @@ st_autorefresh(interval=1000, limit=None, key="timer_refresh")
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== BOLOS (CORRECCIÓN ÚNICA) ==================
-bolos_html = """
-<div style="
-    display:flex;
-    justify-content:center;
-    gap:20px;
-    margin-top:15px;
-">
-"""
-
-for n in st.session_state.ultimo_resultado:
-    bolos_html += f"""
+# ================== RESULTADO (SOLO NÚMEROS) ==================
+st.markdown(
+    f"""
     <div style="
-        width:80px;height:80px;
-        border-radius:50%;
-        background:#ff5722;
-        color:white;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:32px;
+        text-align:center;
+        font-size:42px;
         font-weight:bold;
+        margin-top:15px;
+        letter-spacing:12px;
     ">
-        {n}
+        {" ".join(st.session_state.ultimo_resultado)}
     </div>
-    """
-
-bolos_html += "</div>"
-
-st.markdown(bolos_html, unsafe_allow_html=True)
-
-
+    """,
+    unsafe_allow_html=True
+)
 # ================== SORTEO ==================
 if segundos == 0:
     resultado = [random.randint(0, 99) for _ in range(3)]
@@ -180,3 +163,4 @@ st.divider()
 if st.button("🚪 Cerrar sesión", key="logout"):
     st.session_state.clear()
     st.rerun()
+
