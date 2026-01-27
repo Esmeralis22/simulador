@@ -44,8 +44,14 @@ if "mostrar_recarga" not in st.session_state:
     st.session_state.mostrar_recarga = False
 if "ver_resultados" not in st.session_state:
     st.session_state.ver_resultados = False
+if "recargas_pendientes" not in st.session_state:
+    st.session_state.recargas_pendientes = {}
 
-# ================== LOGIN / REGISTRO ==================
+# ================== CONFIG ==================
+ADMIN_USER = "admin"
+ADMIN_PASS = "admin123"
+
+# ================== LOGIN ==================
 st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
 st.title("🎰 Lotería Dominicana – Simulador")
 
@@ -57,11 +63,16 @@ if st.session_state.user is None:
         c = st.text_input("Clave", type="password", key="login_pass")
         if st.button("Entrar"):
             d = st.session_state.datos
-            if u in d and d[u]["clave"] == c:
+            if u == ADMIN_USER and c == ADMIN_PASS:
+                st.session_state.user = ADMIN_USER
+                st.success("Login como administrador")
+                st.rerun()
+            elif u in d and d[u]["clave"] == c:
                 st.session_state.user = u
-                st.session_state.saldo = d[u]["saldo"]
+                st.session_state.saldo = d[u].get("saldo", 0.0)
                 st.session_state.hist_dia = d[u].get("hist_dia", [])
                 st.session_state.resultados_dia = d[u].get("resultados_dia", [])
+                st.session_state.recargas_pendientes = d[u].get("recargas_pendientes", {})
                 st.success("Login correcto")
                 st.rerun()
             else:
@@ -70,21 +81,102 @@ if st.session_state.user is None:
     with tab2:
         ru = st.text_input("Nuevo usuario")
         rc = st.text_input("Clave", type="password")
-        rs = st.number_input("Saldo inicial", min_value=1.0, step=1.0)
         if st.button("Crear usuario"):
-            rs *= 1.1
-            st.session_state.datos[ru] = {
-                "clave": rc,
-                "saldo": rs,
-                "hist_dia": [],
-                "resultados_dia": []
-            }
-            guardar(st.session_state.datos)
-            st.success(f"Usuario creado con saldo {rd(rs)}")
-
+            if ru in st.session_state.datos:
+                st.error("Usuario ya existe")
+            else:
+                st.session_state.datos[ru] = {
+                    "clave": rc,
+                    "saldo": 0.0,  # No hay saldo inicial
+                    "hist_dia": [],
+                    "resultados_dia": [],
+                    "recargas_pendientes": {}
+                }
+                guardar(st.session_state.datos)
+                st.success(f"Usuario creado con saldo RD$0.00")
     st.stop()
 
-# ================== HEADER ==================
+# ================== ADMIN ==================
+if st.session_state.user == ADMIN_USER:
+    st.subheader("🔧 Panel de Administrador")
+
+    # 1️⃣ Ver todos los usuarios
+    st.write("**1️⃣ Usuarios registrados:**")
+    for usr, info in st.session_state.datos.items():
+        st.write(f"- {usr} | Saldo: {rd(info.get('saldo',0))}")
+
+    st.divider()
+
+    # 2️⃣ Historial global del día
+    st.write("**2️⃣ Historial global del día:**")
+    for usr, info in st.session_state.datos.items():
+        for r in info.get("hist_dia", []):
+            st.text_area(f"{usr}", r, height=50)
+
+    st.divider()
+
+    # 3️⃣ Resultados oficiales del día
+    st.write("**3️⃣ Resultados del día:**")
+    for usr, info in st.session_state.datos.items():
+        for r in info.get("resultados_dia", []):
+            st.text_area(f"{usr}", r, height=30)
+
+    st.divider()
+
+    # 4️⃣ Aprobar recargas y editar saldo
+    st.write("**4️⃣ Recargas pendientes y edición de saldo:**")
+    for usr, info in st.session_state.datos.items():
+        recs = info.get("recargas_pendientes", {})
+        for key, monto in recs.items():
+            col1, col2 = st.columns([3,1])
+            with col1:
+                st.write(f"{usr} solicitó: {rd(monto)}")
+            with col2:
+                if st.button(f"Aprobar {usr}-{key}"):
+                    bono = monto*0.10
+                    total = monto + bono
+                    st.session_state.datos[usr]["saldo"] += total
+                    del st.session_state.datos[usr]["recargas_pendientes"][key]
+                    guardar(st.session_state.datos)
+                    st.success(f"Aprobado {rd(monto)} + bono {rd(bono)} a {usr}")
+
+    st.divider()
+
+    # 5️⃣ Bloquear / desbloquear usuarios
+    st.write("**5️⃣ Bloquear / desbloquear usuarios**")
+    for usr in st.session_state.datos.keys():
+        estado = st.session_state.datos[usr].get("bloqueado", False)
+        if st.button(f"{'Desbloquear' if estado else 'Bloquear'} {usr}"):
+            st.session_state.datos[usr]["bloqueado"] = not estado
+            guardar(st.session_state.datos)
+            st.experimental_rerun()
+
+    st.divider()
+
+    # 6️⃣ Estadísticas del sistema
+    st.write("**6️⃣ Estadísticas:**")
+    total_users = len(st.session_state.datos)
+    total_saldo = sum(info.get("saldo",0) for info in st.session_state.datos.values())
+    st.write(f"Usuarios: {total_users} | Saldo total: {rd(total_saldo)}")
+
+    st.divider()
+
+    # 7️⃣ Reset diario
+    if st.button("7️⃣ Reset diario (historial del día)"):
+        for usr in st.session_state.datos.keys():
+            st.session_state.datos[usr]["hist_dia"] = []
+            st.session_state.datos[usr]["resultados_dia"] = []
+        guardar(st.session_state.datos)
+        st.success("Historial del día reseteado")
+
+    st.divider()
+
+    # 8️⃣ Modo solo lectura
+    st.write("**8️⃣ Modo solo lectura:**")
+    st.write("No se pueden modificar apuestas ni recargas mientras esté activo.")
+    st.stop()
+
+# ================== HEADER USUARIOS ==================
 col1, col2 = st.columns([9, 1])
 with col1:
     st.success(f"👤 {st.session_state.user} | 💰 {rd(st.session_state.saldo)}")
@@ -94,15 +186,13 @@ with col2:
 
 # ================== RECARGA ==================
 if st.session_state.mostrar_recarga:
-    with st.expander("💳 Recargar saldo", expanded=True):
+    with st.expander("💳 Solicitar recarga", expanded=True):
         monto = st.number_input("Monto a recargar", min_value=1.0, step=1.0)
-        if st.button("Confirmar recarga"):
-            bono = monto * 0.10
-            total = monto + bono
-            st.session_state.saldo += total
-            st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+        if st.button("Solicitar recarga"):
+            key = str(time.time())
+            st.session_state.datos[st.session_state.user].setdefault("recargas_pendientes", {})[key] = monto
             guardar(st.session_state.datos)
-            st.success(f"Recargado {rd(monto)} + bono {rd(bono)}")
+            st.success(f"Recarga de {rd(monto)} solicitada para aprobación del admin")
             st.session_state.mostrar_recarga = False
             st.rerun()
 
@@ -194,9 +284,13 @@ with st.expander("📅 Ver historial del día"):
 if st.button("📊 Resultados del día"):
     st.text_area("Resultados", "\n".join(st.session_state.resultados_dia), height=300)
 
+# ================== POPUP GANANCIA ==================
+if st.session_state.popup_ganancia:
+    st.success(st.session_state.popup_ganancia)
+    st.session_state.popup_ganancia = None
+
 # ================== LOGOUT ==================
 st.divider()
 if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
-
