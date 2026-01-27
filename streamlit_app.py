@@ -122,22 +122,29 @@ if st.session_state.user == ADMIN_USER:
     st.divider()
 
     # 4️⃣ Aprobar recargas y editar saldo
-    st.write("**4️⃣ Recargas pendientes y edición de saldo:**")
-    for usr, info in st.session_state.datos.items():
-        recs = info.get("recargas_pendientes", {})
-        for key, monto in list(recs.items()):
-            col1, col2 = st.columns([3,1])
-            with col1:
-                st.write(f"{usr} solicitó: {rd(monto)}")
-            with col2:
-                if st.button(f"Aprobar {usr}-{key}"):
-                    bono = monto*0.10
-                    total = monto + bono
-                    st.session_state.datos[usr]["saldo"] += total
-                    del st.session_state.datos[usr]["recargas_pendientes"][key]
-                    guardar(st.session_state.datos)
-                    st.success(f"Aprobado {rd(monto)} + bono {rd(bono)} a {usr}")
-                    st.experimental_rerun()
+st.write("**4️⃣ Recargas pendientes y edición de saldo:**")
+recarga_aprobada = None  # para controlar qué recarga aprobar
+for usr, info in st.session_state.datos.items():
+    recs = info.get("recargas_pendientes", {})
+    for key, monto in list(recs.items()):  # iterar sobre copia
+        col1, col2 = st.columns([3,1])
+        with col1:
+            st.write(f"{usr} solicitó: {rd(monto)}")
+        with col2:
+            if st.button(f"Aprobar {usr}-{key}"):
+                recarga_aprobada = (usr, key, monto)
+
+# fuera del loop: procesar aprobación
+if recarga_aprobada:
+    usr, key, monto = recarga_aprobada
+    bono = monto * 0.10
+    total = monto + bono
+    st.session_state.datos[usr]["saldo"] += total
+    del st.session_state.datos[usr]["recargas_pendientes"][key]
+    guardar(st.session_state.datos)
+    st.success(f"Aprobado {rd(monto)} + bono {rd(bono)} a {usr}")
+    st.experimental_rerun()
+
 
     st.divider()
 
@@ -294,6 +301,7 @@ st.divider()
 if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
+
 
 
 
