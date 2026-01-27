@@ -72,8 +72,38 @@ if st.session_state.user is None:
 
     st.stop()
 
-# ================== HEADER ==================
-st.success(f"👤 {st.session_state.user} | 💰 ${st.session_state.saldo:.2f}")
+# ================== HEADER (ÚNICA PARTE MODIFICADA) ==================
+col_user, col_saldo, col_plus = st.columns([4, 2, 1])
+
+with col_user:
+    st.success(f"👤 {st.session_state.user}")
+
+with col_saldo:
+    st.success(f"💰 ${st.session_state.saldo:.2f}")
+
+with col_plus:
+    if st.button("➕", key="btn_recargar"):
+        st.session_state.mostrar_recarga = True
+
+if st.session_state.get("mostrar_recarga", False):
+    monto_recarga = st.number_input(
+        "Monto a recargar",
+        min_value=1.0,
+        step=1.0,
+        key="monto_recarga"
+    )
+
+    if st.button("💳 Confirmar recarga"):
+        bono = monto_recarga * 0.10
+        total = monto_recarga + bono
+
+        st.session_state.saldo += total
+        st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
+        guardar(st.session_state.datos)
+
+        st.success(f"Recarga exitosa 💰 ${monto_recarga:.2f} + bono ${bono:.2f}")
+        st.session_state.mostrar_recarga = False
+        st.rerun()
 
 # ================== AUTO REFRESH ==================
 st_autorefresh(interval=1000, limit=None, key="timer_refresh")
@@ -81,21 +111,11 @@ st_autorefresh(interval=1000, limit=None, key="timer_refresh")
 segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
 st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== RESULTADO (SOLO NÚMEROS) ==================
+# ================== RESULTADO EN TIEMPO REAL ==================
 st.markdown(
-    f"""
-    <div style="
-        text-align:center;
-        font-size:42px;
-        font-weight:bold;
-        margin-top:15px;
-        letter-spacing:12px;
-    ">
-        {" ".join(st.session_state.ultimo_resultado)}
-    </div>
-    """,
-    unsafe_allow_html=True
+    f"## 🎲 Resultado actual: **{' '.join(st.session_state.ultimo_resultado)}**"
 )
+
 # ================== SORTEO ==================
 if segundos == 0:
     resultado = [random.randint(0, 99) for _ in range(3)]
@@ -163,4 +183,5 @@ st.divider()
 if st.button("🚪 Cerrar sesión", key="logout"):
     st.session_state.clear()
     st.rerun()
+
 
