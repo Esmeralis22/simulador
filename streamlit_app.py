@@ -52,42 +52,47 @@ ADMIN_USER = "admin"
 ADMIN_PASS = "admin123"
 
 # ================== LOGIN ==================
-u = st.text_input("Usuario", key="login_user")
-c = st.text_input("Clave", type="password", key="login_pass")
-if st.button("Entrar"):
-    if u == "admin" and c == "admin123":
-        st.session_state.user = "admin"
-        st.success("Bienvenido Admin")
-        st.rerun()
-    else:
-        d = st.session_state.datos
-        if u in d and d[u]["clave"] == c:
-            st.session_state.user = u
-            st.session_state.saldo = d[u]["saldo"]
-            st.session_state.hist_dia = d[u].get("hist_dia", [])
-            st.session_state.resultados_dia = d[u].get("resultados_dia", [])
-            st.success("Login correcto")
+st.set_page_config(page_title="🎰 Lotería Dominicana", layout="centered")
+st.title("🎰 Lotería Dominicana – Simulador")
+
+if st.session_state.user is None:
+    st.subheader("🔐 Login")
+    u = st.text_input("Usuario", key="login_user")
+    c = st.text_input("Clave", type="password", key="login_pass")
+    if st.button("Entrar"):
+        if u == ADMIN_USER and c == ADMIN_PASS:
+            st.session_state.user = ADMIN_USER
+            st.success("Bienvenido Admin")
             st.rerun()
         else:
-            st.error("Usuario o clave incorrectos")
-
-    with tab2:
-        ru = st.text_input("Nuevo usuario")
-        rc = st.text_input("Clave", type="password")
-        if st.button("Crear usuario"):
-            if ru in st.session_state.datos:
-                st.error("Usuario ya existe")
+            d = st.session_state.datos
+            if u in d and d[u]["clave"] == c:
+                st.session_state.user = u
+                st.session_state.saldo = d[u]["saldo"]
+                st.session_state.hist_dia = d[u].get("hist_dia", [])
+                st.session_state.resultados_dia = d[u].get("resultados_dia", [])
+                st.success("Login correcto")
+                st.rerun()
             else:
-                st.session_state.datos[ru] = {
-                    "clave": rc,
-                    "saldo": 0.0,  # No hay saldo inicial
-                    "hist_dia": [],
-                    "resultados_dia": [],
-                    "recargas_pendientes": {}
-                }
-                guardar(st.session_state.datos)
-                st.success(f"Usuario creado con saldo RD$0.00")
-    st.stop()
+                st.error("Usuario o clave incorrectos")
+
+    st.subheader("🆕 Registro")
+    ru = st.text_input("Nuevo usuario")
+    rc = st.text_input("Clave", type="password")
+    if st.button("Crear usuario"):
+        if ru in st.session_state.datos:
+            st.error("Usuario ya existe")
+        else:
+            st.session_state.datos[ru] = {
+                "clave": rc,
+                "saldo": 0.0,  # no hay saldo inicial
+                "hist_dia": [],
+                "resultados_dia": [],
+                "recargas_pendientes": {}
+            }
+            guardar(st.session_state.datos)
+            st.success("Usuario creado con saldo RD$0.00")
+    st.stop()  # detiene la ejecución hasta login exitoso
 
 # ================== ADMIN ==================
 if st.session_state.user == ADMIN_USER:
@@ -117,23 +122,22 @@ if st.session_state.user == ADMIN_USER:
     st.divider()
 
     # 4️⃣ Aprobar recargas y editar saldo
-st.write("**4️⃣ Recargas pendientes y edición de saldo:**")
-for usr, info in st.session_state.datos.items():
-    recs = info.get("recargas_pendientes", {})
-    if recs:  # <-- solo si hay recargas pendientes
-        for key, monto in recs.items():
-            col1, col2 = st.columns([3,1])
-            with col1:
-                st.write(f"{usr} solicitó: {rd(monto)}")
-            with col2:
-                if st.button(f"Aprobar {usr}-{key}"):
-                    bono = monto*0.10
-                    total = monto + bono
-                    st.session_state.datos[usr]["saldo"] += total
-                    del st.session_state.datos[usr]["recargas_pendientes"][key]
-                    guardar(st.session_state.datos)
-                    st.success(f"Aprobado {rd(monto)} + bono {rd(bono)} a {usr}")
-
+    st.write("**4️⃣ Recargas pendientes y edición de saldo:**")
+    for usr, info in st.session_state.datos.items():
+        recs = info.get("recargas_pendientes", {})
+        if recs:
+            for key, monto in recs.items():
+                col1, col2 = st.columns([3,1])
+                with col1:
+                    st.write(f"{usr} solicitó: {rd(monto)}")
+                with col2:
+                    if st.button(f"Aprobar {usr}-{key}"):
+                        bono = monto*0.10
+                        total = monto + bono
+                        st.session_state.datos[usr]["saldo"] += total
+                        del st.session_state.datos[usr]["recargas_pendientes"][key]
+                        guardar(st.session_state.datos)
+                        st.success(f"Aprobado {rd(monto)} + bono {rd(bono)} a {usr}")
 
     st.divider()
 
@@ -289,5 +293,3 @@ st.divider()
 if st.button("🚪 Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
-
-
