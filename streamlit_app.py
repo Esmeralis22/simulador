@@ -16,11 +16,12 @@ st.set_page_config(page_title="Sorteo en Tiempo Real", layout="centered")
 if "inicio" not in st.session_state:
     st.session_state.inicio = time.time()
     st.session_state.historial = []
+    st.session_state.sorteo_activo = True
 
 # ===============================
-# AUTO REFRESH (1 segundo)
+# AUTO REFRESH CADA 1 SEGUNDO  ✅ (CORREGIDO)
 # ===============================
-st_autorefresh(interval=1000, key="refresh")
+st_autorefresh(interval=1000, key="refresh_sorteo")
 
 # ===============================
 # TIEMPO RESTANTE
@@ -30,22 +31,24 @@ transcurrido = int(ahora - st.session_state.inicio)
 restante = max(0, DURACION_SORTEO - transcurrido)
 
 st.title("🎰 Sorteo Automático")
-st.subheader("⏳ Tiempo restante")
+
+st.subheader("⏳ Tiempo restante:")
 st.markdown(f"## `{restante} segundos`")
 
 # ===============================
-# CUANDO LLEGA A CERO → SORTEO
+# CUANDO LLEGA A CERO
 # ===============================
-if restante == 0:
+if restante == 0 and st.session_state.sorteo_activo:
     numero_ganador = random.randint(0, 99)
 
-    st.session_state.historial.insert(0, {
+    st.session_state.historial.append({
         "hora": time.strftime("%H:%M:%S"),
         "numero": numero_ganador
     })
 
-    # Reiniciar contador
+    # Reiniciar sorteo
     st.session_state.inicio = time.time()
+    st.session_state.sorteo_activo = True
 
 # ===============================
 # HISTORIAL
@@ -54,18 +57,18 @@ st.divider()
 st.subheader("📜 Historial de sorteos")
 
 if st.session_state.historial:
-    for i, s in enumerate(st.session_state.historial[:20], 1):
+    for i, s in enumerate(reversed(st.session_state.historial), 1):
         st.write(f"{i}. ⏰ {s['hora']} → 🎯 **{s['numero']:02d}**")
 else:
     st.info("Aún no hay sorteos")
 
 # ===============================
-# BOTÓN MANUAL
+# BOTÓN MANUAL (OPCIONAL)
 # ===============================
 st.divider()
 if st.button("🎲 Forzar sorteo ahora"):
     numero = random.randint(0, 99)
-    st.session_state.historial.insert(0, {
+    st.session_state.historial.append({
         "hora": time.strftime("%H:%M:%S"),
         "numero": numero
     })
