@@ -9,14 +9,18 @@ DATA_FILE = "usuarios_loteria.json"
 def cargar():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf8") as f:
-            return json.load(f)
-    return {
-        "usuarios": {},
-        "recargas": [],
-        "retiros": [],
-        "bloqueados": [],
-        "congelados": []
-    }
+            d = json.load(f)
+    else:
+        d = {}
+
+    # 🔒 Blindaje de estructura
+    d.setdefault("usuarios", {})
+    d.setdefault("recargas", [])
+    d.setdefault("retiros", [])
+    d.setdefault("bloqueados", [])
+    d.setdefault("congelados", [])
+
+    return d
 
 def guardar(d):
     with open(DATA_FILE, "w", encoding="utf8") as f:
@@ -145,6 +149,7 @@ with st.expander("💸 Solicitar retiro"):
 if st.button("Cerrar sesión"):
     st.session_state.clear()
     st.rerun()
+
 
 
 
