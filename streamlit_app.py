@@ -9,19 +9,12 @@ DATA_FILE = "usuarios_loteria.json"
 def cargar():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf8") as f:
-            d = json.load(f)
-    else:
-        d = {}
-
-    d.setdefault("recargas", [])
-    d.setdefault("retiros", [])
-    d.setdefault("bloqueados", [])
-
-    return d
+            return json.load(f)
+    return {}
 
 def guardar(d):
     with open(DATA_FILE, "w", encoding="utf8") as f:
-        json.dump(d, f, indent=4, ensure_ascii=False)
+        json.dump(d, f, indent=4)
 
 def rd(valor):
     return f"RD${valor:,.2f}"
@@ -49,6 +42,8 @@ if "popup_ganancia" not in st.session_state:
     st.session_state.popup_ganancia = None
 if "mostrar_recarga" not in st.session_state:
     st.session_state.mostrar_recarga = False
+if "ver_resultados" not in st.session_state:
+    st.session_state.ver_resultados = False
 if "confirm_delete" not in st.session_state:
     st.session_state.confirm_delete = False
 
@@ -62,151 +57,65 @@ if st.session_state.user is None:
     with tab1:
         u = st.text_input("Usuario", key="login_user")
         c = st.text_input("Clave", type="password", key="login_pass")
-
-        if st.button("Entrar"):
-            if u == "admin" and c == "admin123":
-                st.session_state.user = "admin"
-                st.rerun()
-
+        if st.button("Entrar", key="btn_login"):
             d = st.session_state.datos
             if u in d and d[u]["clave"] == c:
-                if u in d["bloqueados"]:
-                    st.error("🚫 Usuario bloqueado")
-                else:
-                    st.session_state.user = u
-                    st.session_state.saldo = d[u]["saldo"]
-                    st.session_state.hist_dia = d[u].get("hist_dia", [])
-                    st.session_state.resultados_dia = d[u].get("resultados_dia", [])
-                    st.success("Login correcto")
-                    st.rerun()
+                st.session_state.user = u
+                st.session_state.saldo = d[u]["saldo"]
+                st.session_state.hist_dia = d[u].get("hist_dia", [])
+                st.session_state.resultados_dia = d[u].get("resultados_dia", [])
+                st.success("Login correcto")
+                st.rerun()
             else:
                 st.error("Usuario o clave incorrectos")
 
     with tab2:
         ru = st.text_input("Nuevo usuario", key="reg_user")
         rc = st.text_input("Clave", type="password", key="reg_pass")
-
-        if st.button("Crear usuario"):
+        rs = st.number_input("Saldo inicial", min_value=1.0, step=1.0, key="reg_saldo")
+        if st.button("Crear usuario", key="btn_register"):
+            rs *= 1.1
             st.session_state.datos[ru] = {
                 "clave": rc,
-                "saldo": 0.0,
+                "saldo": rs,
                 "hist_dia": [],
                 "resultados_dia": []
             }
             guardar(st.session_state.datos)
-            st.success("Usuario creado con saldo RD$0.00")
-
-    st.stop()
-
-# ================== MODO ADMIN ==================
-if st.session_state.user == "admin":
-    st.subheader("🛠️ Panel Administrador")
-
-    st.markdown("### 💳 Recargas pendientes")
-    for r in st.session_state.datos["recargas"]:
-        if r["estado"] == "pendiente":
-            if st.button(f"Aprobar {r['usuario']} {rd(r['monto'])}",
-                         key="rec_"+r["usuario"]+r["fecha"]):
-                st.session_state.datos[r["usuario"]]["saldo"] += r["monto"]
-                r["estado"] = "aprobado"
-                guardar(st.session_state.datos)
-                st.rerun()
-
-    st.markdown("### 💸 Retiros pendientes")
-    for r in st.session_state.datos["retiros"]:
-        if r["estado"] == "pendiente":
-            if st.button(f"Aprobar retiro {r['usuario']} {rd(r['monto'])}",
-                         key="ret_"+r["usuario"]+r["fecha"]):
-                r["estado"] = "aprobado"
-                guardar(st.session_state.datos)
-                st.rerun()
-
-    st.divider()
-    st.markdown("### 👥 Bloquear / Desbloquear usuarios")
-
-    for u in [x for x in st.session_state.datos if x not in ["recargas","retiros","bloqueados"]]:
-        col1, col2 = st.columns([6,2])
-        col1.write(u)
-
-        if u in st.session_state.datos["bloqueados"]:
-            if col2.button("🔓 Desbloquear", key="unb_"+u):
-                st.session_state.datos["bloqueados"].remove(u)
-                guardar(st.session_state.datos)
-                st.rerun()
-        else:
-            if col2.button("🚫 Bloquear", key="bl_"+u):
-                st.session_state.datos["bloqueados"].append(u)
-                guardar(st.session_state.datos)
-                st.rerun()
-
-    st.divider()
-    st.markdown("### 📊 Historial por usuario")
-
-    usuario_sel = st.selectbox(
-        "Usuario",
-        [x for x in st.session_state.datos if x not in ["recargas","retiros","bloqueados"]],
-        key="hist_user"
-    )
-
-    st.markdown("#### 💳 Recargas")
-    for r in st.session_state.datos["recargas"]:
-        if r["usuario"] == usuario_sel:
-            st.write(f"{r['fecha']} | {rd(r['monto'])} | {r['estado']}")
-
-    st.markdown("#### 💸 Retiros")
-    for r in st.session_state.datos["retiros"]:
-        if r["usuario"] == usuario_sel:
-            st.write(f"{r['fecha']} | {rd(r['monto'])} | {r['banco']} | {r['estado']}")
-
-    if st.button("🚪 Cerrar sesión"):
-        st.session_state.clear()
-        st.rerun()
+            st.success(f"Usuario creado con saldo {rd(rs)}")
 
     st.stop()
 
 # ================== HEADER ==================
-col1, col2 = st.columns([9,1])
+col1, col2 = st.columns([9, 1])
 with col1:
     st.success(f"👤 {st.session_state.user} | 💰 {rd(st.session_state.saldo)}")
 with col2:
-    if st.button("➕"):
+    if st.button("➕", key="btn_recarga"):
         st.session_state.mostrar_recarga = True
 
-# ================== RECARGA (PENDIENTE) ==================
+# ================== RECARGA ==================
 if st.session_state.mostrar_recarga:
-    with st.expander("💳 Solicitar recarga", expanded=True):
-        monto = st.number_input("Monto a recargar", min_value=1.0)
-        if st.button("Enviar solicitud"):
-            st.session_state.datos["recargas"].append({
-                "usuario": st.session_state.user,
-                "monto": monto,
-                "fecha": str(datetime.now()),
-                "estado": "pendiente"
-            })
+    with st.expander("💳 Recargar saldo", expanded=True):
+        monto = st.number_input("Monto a recargar", min_value=1.0, step=1.0, key="rec_monto")
+        if st.button("Confirmar recarga", key="btn_confirm_recarga"):
+            bono = monto * 0.10
+            total = monto + bono
+            st.session_state.saldo += total
+            st.session_state.datos[st.session_state.user]["saldo"] = st.session_state.saldo
             guardar(st.session_state.datos)
-            st.info("⏳ Recarga pendiente de aprobación")
+            st.success(f"Recargado {rd(monto)} + bono {rd(bono)}")
             st.session_state.mostrar_recarga = False
             st.rerun()
 
-# ================== RETIRO ==================
-with st.expander("💸 Solicitar retiro"):
-    monto = st.number_input("Monto a retirar", min_value=1.0, key="ret_monto")
-    banco = st.text_input("Banco", key="ret_banco")
-    cuenta = st.text_input("Cuenta", key="ret_cuenta")
+# ================== AUTO REFRESH ==================
+st_autorefresh(interval=1000, limit=None)
 
-    if st.button("Solicitar retiro"):
-        st.session_state.datos["retiros"].append({
-            "usuario": st.session_state.user,
-            "monto": monto,
-            "banco": banco,
-            "cuenta": cuenta,
-            "fecha": str(datetime.now()),
-            "estado": "pendiente"
-        })
-        guardar(st.session_state.datos)
-        st.info("⏳ Retiro pendiente")
+segundos = max(0, 60 - int(time.time() - st.session_state.inicio_sorteo))
+st.subheader(f"⏳ Sorteo en {segundos}s")
 
-# ================== AQUÍ SIGUE TU JUEGO ORIGINAL ==================
-# ⛔ NO SE TOCÓ NADA DE SORTEOS, APUESTAS NI HISTORIALES
-
-
+# ================== RESULTADO ==================
+st.markdown(
+    f"<h1 style='text-align:center'>{' '.join(st.session_state.ultimo_resultado)}</h1>",
+    unsafe_allow_html=True
+)
